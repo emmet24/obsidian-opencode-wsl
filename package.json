@@ -9,12 +9,12 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/your-github-username/obsidian-opencode-wsl.git"
+    "url": "git+https://github.com/emmet24/obsidian-opencode-wsl.git"
   },
   "bugs": {
-    "url": "https://github.com/your-github-username/obsidian-opencode-wsl/issues"
+    "url": "https://github.com/emmet24/obsidian-opencode-wsl/issues"
   },
-  "homepage": "https://github.com/your-github-username/obsidian-opencode-wsl#readme",
+  "homepage": "https://github.com/emmet24/obsidian-opencode-wsl#readme",
   "keywords": ["obsidian", "plugin", "opencode", "wsl", "terminal", "tui", "ai"],
   "license": "MIT",
   "dependencies": {

@@ -6,7 +6,7 @@ const production = process.argv.includes("--production")
   ? true
   : false;
 
-const banner = "/* THIS IS A GENERATED BUNDLE FILE\n * Source: https://github.com/your-github-username/obsidian-opencode-wsl\n */\n";
+const banner = "/* THIS IS A GENERATED BUNDLE FILE\n * Source: https://github.com/emmet24/obsidian-opencode-wsl\n */\n";
 
 async function main() {
   const context = await esbuild.context({

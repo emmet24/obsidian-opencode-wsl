@@ -72,7 +72,7 @@ Obsidian (Windows)                    WSL (Linux)
 
 ```bash
 # Clone the repo
-git clone https://github.com/your-github-username/obsidian-opencode-wsl.git
+git clone https://github.com/emmet24/obsidian-opencode-wsl.git
 cd obsidian-opencode-wsl
 
 # Install dependencies
