@@ -1,0 +1,11 @@
+{
+	"id": "opencode-wsl",
+	"name": "OpenCode WSL",
+	"version": "1.0.0",
+	"minAppVersion": "1.7.2",
+	"description": "Embed OpenCode TUI in the Obsidian sidebar via a lightweight WebSocket bridge to WSL.",
+	"author": "your-github-username",
+	"authorUrl": "https://github.com/your-github-username/obsidian-opencode-wsl",
+	"fundingUrl": "https://github.com/your-github-username/obsidian-opencode-wsl",
+	"isDesktopOnly": true
+}
