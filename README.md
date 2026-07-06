@@ -36,15 +36,16 @@ Obsidian (Windows)                    WSL (Linux)
 
 ## Installation
 
-### From Obsidian Community Plugins (once published)
+### Via BRAT (recommended)
 
-1. Settings → Community plugins → Browse
-2. Search "OpenCode WSL"
-3. Install & Enable
+1. Install [BRAT](https://obsidian.md/plugins?id=obsidian42-brat) from Community plugins
+2. Run command `BRAT: Add a beta plugin for testing`
+3. Enter `https://github.com/emmet24/obsidian-opencode-wsl`
+4. Enable the plugin in Settings → Community plugins
 
-### Manual (BRAT / development)
+### Manual
 
-1. Download the latest release from GitHub
+1. Download the latest release from [GitHub releases](https://github.com/emmet24/obsidian-opencode-wsl/releases)
 2. Extract to `<vault>/.obsidian/plugins/opencode-wsl/`
 3. Enable the plugin in Settings → Community plugins
 
