@@ -26,7 +26,7 @@ jobs:
       - name: Package release
         run: |
           mkdir -p obsidian-opencode-wsl
-          cp main.js manifest.json styles.css obsidian-opencode-wsl/
+          cp main.js bridge.js manifest.json styles.css obsidian-opencode-wsl/
           zip -r obsidian-opencode-wsl.zip obsidian-opencode-wsl/
 
       - name: Create GitHub Release
@@ -35,6 +35,7 @@ jobs:
           files: |
             obsidian-opencode-wsl.zip
             main.js
+            bridge.js
             manifest.json
             styles.css
           generate_release_notes: true
