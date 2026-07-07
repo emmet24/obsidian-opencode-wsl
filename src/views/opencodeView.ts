@@ -157,14 +157,6 @@ export class OpencodeWslView extends ItemView {
 		});
 
 		// Handle IME composition (Chinese/Japanese/Korean input)
-		const compositionHandler = (event: CompositionEvent) => {
-			if (!this.termContainer?.contains(event.target as HTMLElement)) return;
-			if (event.data && this.ws && this.ws.readyState === WebSocket.OPEN) {
-				this.ws.send(JSON.stringify({ type: "input", data: event.data }));
-			}
-		};
-		termContainer.addEventListener("compositionend", compositionHandler);
-		this.register(() => termContainer.removeEventListener("compositionend", compositionHandler));
 
 		// Handle paste (right-click)
 		const pasteHandler = (event: ClipboardEvent) => {
