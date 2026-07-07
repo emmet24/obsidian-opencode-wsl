@@ -1,7 +1,6 @@
 import { ItemView, WorkspaceLeaf } from "obsidian";
 import { Terminal } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
-import { WebglAddon } from "@xterm/addon-webgl";
 import { CanvasAddon } from "@xterm/addon-canvas";
 import { WebLinksAddon } from "@xterm/addon-web-links";
 import { Unicode11Addon } from "@xterm/addon-unicode11";
@@ -48,9 +47,8 @@ export class OpencodeWslView extends ItemView {
 
 	async onOpen(): Promise<void> {
 		// Handle deferred views (Obsidian 1.7.2+)
-		const leaf = this.leaf as unknown as { isDeferred?: boolean; loadIfDeferred?: () => Promise<void> };
-		if (leaf.isDeferred) {
-			await leaf.loadIfDeferred?.();
+		if ((this.leaf as any).isDeferred) {
+			await (this.leaf as any).loadIfDeferred();
 		}
 
 		const container = this.containerEl.children[1];
@@ -116,53 +114,59 @@ export class OpencodeWslView extends ItemView {
 
 		terminal.open(termContainer);
 
-		// Try WebGL renderer first, fall back to Canvas, then DOM
 		try {
-			terminal.loadAddon(new WebglAddon());
-		} catch {
-			try {
-				terminal.loadAddon(new CanvasAddon());
-			} catch (e) {
-				console.warn("Canvas renderer failed, using DOM fallback", e);
-			}
+			terminal.loadAddon(new CanvasAddon());
+		} catch (e) {
+			console.warn(
+				"Canvas renderer failed to load, falling back to DOM renderer",
+				e
+			);
 		}
 
 		this.terminal = terminal;
 		this.fitAddon = fitAddon;
 
-		// Capture-phase keydown listener fires BEFORE Obsidian's document-level hotkey handlers.
-		// This prevents Obsidian from intercepting terminal keys like Ctrl+D (bookmark).
-		// Only captures keystrokes inside the terminal container (not password fields, etc.)
-		this.captureHandler = (event: KeyboardEvent) => {
-			if (!this.termContainer?.contains(event.target as HTMLElement)) return;
-			if (event.isComposing) return;
-			const mod = event.ctrlKey || event.metaKey;
-
-			// Handle paste (Ctrl+V / Cmd+V)
-			if (mod && !event.altKey && event.key === "v") {
-				event.stopPropagation();
-				event.preventDefault();
-				navigator.clipboard.readText().then((text) => {
-					if (text && this.ws && this.ws.readyState === WebSocket.OPEN) {
-						this.ws.send(JSON.stringify({ type: "input", data: text }));
-					}
-				}).catch(() => {
-					// clipboard access denied, fall through
-				});
-				return;
-			}
-
-			const seq = this.keyEventToSequence(event);
-			if (seq === undefined) return;
-			event.stopPropagation();
-			event.preventDefault();
+		// Send keyboard input to the PTY via WebSocket (standard xterm.js path)
+		terminal.onData((data) => {
 			if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-				this.ws.send(JSON.stringify({ type: "input", data: seq }));
+				this.ws.send(JSON.stringify({ type: "input", data }));
+			}
+		});
+
+		// Minimal capture-phase handler for Ctrl+D only (Obsidian's bookmark shortcut)
+		// This does NOT call stopPropagation or preventDefault, so it doesn't
+		// interfere with mouse events. The key event still reaches Obsidian.
+		const ctrlDHandler = (event: KeyboardEvent) => {
+			if (!this.termContainer?.contains(event.target as HTMLElement)) return;
+			const mod = event.ctrlKey || event.metaKey;
+			if (mod && event.key === "d") {
+				// Send \x04 to PTY even though Obsidian also processes the bookmark
+				if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+					this.ws.send(JSON.stringify({ type: "input", data: "\x04" }));
+				}
 			}
 		};
-		window.addEventListener("keydown", this.captureHandler, { capture: true });
+		window.addEventListener("keydown", ctrlDHandler, { capture: true });
+		this.register(() => window.removeEventListener("keydown", ctrlDHandler, { capture: true }));
 
-		// Handle right-click paste (use capture phase to catch before xterm.js)
+		// Handle Ctrl+V: let xterm.js ignore it so browser fires paste event
+		terminal.attachCustomKeyEventHandler((event) => {
+			const mod = event.ctrlKey || event.metaKey;
+			if (mod && event.key === "v") return false;
+			return true;
+		});
+
+		// Handle IME composition (Chinese/Japanese/Korean input)
+		const compositionHandler = (event: CompositionEvent) => {
+			if (!this.termContainer?.contains(event.target as HTMLElement)) return;
+			if (event.data && this.ws && this.ws.readyState === WebSocket.OPEN) {
+				this.ws.send(JSON.stringify({ type: "input", data: event.data }));
+			}
+		};
+		termContainer.addEventListener("compositionend", compositionHandler);
+		this.register(() => termContainer.removeEventListener("compositionend", compositionHandler));
+
+		// Handle paste (right-click)
 		const pasteHandler = (event: ClipboardEvent) => {
 			const target = event.target as HTMLElement;
 			if (!this.termContainer?.contains(target)) return;
@@ -175,30 +179,6 @@ export class OpencodeWslView extends ItemView {
 		};
 		window.addEventListener("paste", pasteHandler, { capture: true });
 		this.register(() => window.removeEventListener("paste", pasteHandler, { capture: true }));
-
-		// Handle right-click: copy if selection, otherwise paste
-		termContainer.addEventListener("contextmenu", (event: MouseEvent) => {
-			if (!this.terminal) return;
-			const selected = this.terminal.getSelection();
-			if (selected) {
-				event.preventDefault();
-				navigator.clipboard.writeText(selected).catch(() => {});
-				this.terminal.clearSelection();
-			}
-			// If no selection, default context menu shows (browser handles paste)
-		});
-
-		// Handle IME composition (Chinese/Japanese/Korean input)
-		// The captureHandler skips keydown events during composition,
-		// so we need to send the final composed text via compositionend.
-		const compositionHandler = (event: CompositionEvent) => {
-			if (!this.termContainer?.contains(event.target as HTMLElement)) return;
-			if (event.data && this.ws && this.ws.readyState === WebSocket.OPEN) {
-				this.ws.send(JSON.stringify({ type: "input", data: event.data }));
-			}
-		};
-		termContainer.addEventListener("compositionend", compositionHandler);
-		this.register(() => termContainer.removeEventListener("compositionend", compositionHandler));
 
 		terminal.onResize(({ cols, rows }) => {
 			if (this.ws && this.ws.readyState === WebSocket.OPEN) {
@@ -230,11 +210,11 @@ export class OpencodeWslView extends ItemView {
 			window.removeEventListener("resize", this.fitTerminal)
 		);
 
-		window.setTimeout(() => this.fitTerminal(), 0);
-		window.setTimeout(() => this.fitTerminal(), 100);
-		window.setTimeout(() => this.fitTerminal(), 300);
+		setTimeout(() => this.fitTerminal(), 0);
+		setTimeout(() => this.fitTerminal(), 100);
+		setTimeout(() => this.fitTerminal(), 300);
 
-		void this.plugin.bridgeManager?.start();
+		this.plugin.bridgeManager?.start();
 		this.connectAttempts = 0;
 		this.connectWebSocket();
 	}
@@ -248,7 +228,7 @@ export class OpencodeWslView extends ItemView {
 		}
 
 		if (this.reconnectTimer !== null) {
-			window.clearTimeout(this.reconnectTimer);
+			clearTimeout(this.reconnectTimer);
 			this.reconnectTimer = null;
 		}
 
@@ -262,7 +242,7 @@ export class OpencodeWslView extends ItemView {
 		if (this.terminal) {
 			try {
 				this.terminal.dispose();
-			} catch {
+			} catch (e) {
 				// dispose can throw if already disposed
 			}
 			this.terminal = null;
@@ -292,21 +272,21 @@ export class OpencodeWslView extends ItemView {
 
 		try {
 			const ws = new WebSocket(url);
-			const timeout = window.setTimeout(() => {
+			const timeout = setTimeout(() => {
 				if (ws.readyState !== WebSocket.OPEN) {
 					ws.close();
 				}
 			}, 5000);
 
 			ws.onopen = () => {
-				window.clearTimeout(timeout);
+				clearTimeout(timeout);
 				this.onWsOpen();
 			};
 			ws.onmessage = (event: MessageEvent) => {
 				this.onWsMessage(event);
 			};
 			ws.onclose = () => {
-				window.clearTimeout(timeout);
+				clearTimeout(timeout);
 				this.onWsClose();
 			};
 			ws.onerror = () => {
@@ -341,7 +321,7 @@ export class OpencodeWslView extends ItemView {
 
 		try {
 			this.fitAddon.fit();
-		} catch {
+		} catch (e) {
 			// ignore
 		}
 
@@ -366,7 +346,7 @@ export class OpencodeWslView extends ItemView {
 		if (!this.terminal) return;
 
 		try {
-			const msg = JSON.parse(event.data as string) as WsMessage;
+			const msg: WsMessage = JSON.parse(event.data as string);
 
 			switch (msg.type) {
 				case "output":
@@ -389,7 +369,7 @@ export class OpencodeWslView extends ItemView {
 					}
 					break;
 			}
-		} catch {
+		} catch (e) {
 			if (this.terminal) {
 				this.terminal.write(event.data as string);
 			}
@@ -408,7 +388,7 @@ export class OpencodeWslView extends ItemView {
 	private scheduleReconnect(): void {
 		if (!this.shouldReconnect) return;
 
-		this.reconnectTimer = window.window.setTimeout(() => {
+		this.reconnectTimer = window.setTimeout(() => {
 			if (!this.shouldReconnect) return;
 			this.connectWebSocket();
 		}, this.plugin.settings.reconnectDelay);
@@ -422,7 +402,7 @@ export class OpencodeWslView extends ItemView {
 		) {
 			try {
 				this.fitAddon.fit();
-			} catch {
+			} catch (e) {
 				// fit can fail during rapid layout changes (e.g. sidebar resize)
 			}
 		}
