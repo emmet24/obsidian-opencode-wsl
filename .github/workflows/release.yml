@@ -5,6 +5,9 @@ on:
     tags:
       - "[0-9]+.[0-9]+.[0-9]+"
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -14,7 +17,7 @@ jobs:
       - name: Use Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "22"
           cache: "npm"
 
       - name: Install dependencies
@@ -38,5 +41,14 @@ jobs:
             bridge.js
             manifest.json
             styles.css
-          generate_release_notes: true
           make_latest: true
+          body: |
+            ## Installation
+
+            ### Via BRAT
+            1. Install [BRAT](https://obsidian.md/plugins?id=obsidian42-brat)
+            2. Run `BRAT: Add a beta plugin for testing`
+            3. Enter `https://github.com/emmet24/obsidian-opencode-wsl`
+
+            ### Manual
+            Download `obsidian-opencode-wsl.zip` and extract to `<vault>/.obsidian/plugins/opencode-wsl/`
