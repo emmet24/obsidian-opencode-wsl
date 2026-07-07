@@ -1,7 +1,7 @@
 {
 	"id": "opencode-wsl",
 	"name": "OpenCode WSL",
-	"version": "1.0.1",
+	"version": "1.0.2",
 	"minAppVersion": "1.7.2",
 	"description": "Embed OpenCode TUI in the sidebar via a lightweight WebSocket bridge to WSL.",
 	"author": "emmet24",

@@ -1,8 +1,10 @@
 import { ItemView, WorkspaceLeaf } from "obsidian";
 import { Terminal } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
+import { WebglAddon } from "@xterm/addon-webgl";
 import { CanvasAddon } from "@xterm/addon-canvas";
 import { WebLinksAddon } from "@xterm/addon-web-links";
+import { Unicode11Addon } from "@xterm/addon-unicode11";
 import type OpencodeWslPlugin from "../main";
 
 export const VIEW_TYPE_OPENCODE_WSL = "opencode-wsl-view";
@@ -107,15 +109,22 @@ export class OpencodeWslView extends ItemView {
 		terminal.loadAddon(fitAddon);
 		terminal.loadAddon(new WebLinksAddon());
 
+		// Unicode 11 support for proper box-drawing and powerline characters
+		const unicodeAddon = new Unicode11Addon();
+		terminal.loadAddon(unicodeAddon);
+		terminal.unicode.activeVersion = "11";
+
 		terminal.open(termContainer);
 
+		// Try WebGL renderer first, fall back to Canvas, then DOM
 		try {
-			terminal.loadAddon(new CanvasAddon());
-		} catch (e) {
-			console.warn(
-				"Canvas renderer failed to load, falling back to DOM renderer",
-				e
-			);
+			terminal.loadAddon(new WebglAddon());
+		} catch {
+			try {
+				terminal.loadAddon(new CanvasAddon());
+			} catch (e) {
+				console.warn("Canvas renderer failed, using DOM fallback", e);
+			}
 		}
 
 		this.terminal = terminal;
@@ -127,6 +136,22 @@ export class OpencodeWslView extends ItemView {
 		this.captureHandler = (event: KeyboardEvent) => {
 			if (!this.termContainer?.contains(event.target as HTMLElement)) return;
 			if (event.isComposing) return;
+			const mod = event.ctrlKey || event.metaKey;
+
+			// Handle paste (Ctrl+V / Cmd+V)
+			if (mod && !event.altKey && event.key === "v") {
+				event.stopPropagation();
+				event.preventDefault();
+				navigator.clipboard.readText().then((text) => {
+					if (text && this.ws && this.ws.readyState === WebSocket.OPEN) {
+						this.ws.send(JSON.stringify({ type: "input", data: text }));
+					}
+				}).catch(() => {
+					// clipboard access denied, fall through
+				});
+				return;
+			}
+
 			const seq = this.keyEventToSequence(event);
 			if (seq === undefined) return;
 			event.stopPropagation();
@@ -136,6 +161,44 @@ export class OpencodeWslView extends ItemView {
 			}
 		};
 		window.addEventListener("keydown", this.captureHandler, { capture: true });
+
+		// Handle right-click paste (use capture phase to catch before xterm.js)
+		const pasteHandler = (event: ClipboardEvent) => {
+			const target = event.target as HTMLElement;
+			if (!this.termContainer?.contains(target)) return;
+			const text = event.clipboardData?.getData("text/plain");
+			if (text && this.ws && this.ws.readyState === WebSocket.OPEN) {
+				event.preventDefault();
+				event.stopPropagation();
+				this.ws.send(JSON.stringify({ type: "input", data: text }));
+			}
+		};
+		window.addEventListener("paste", pasteHandler, { capture: true });
+		this.register(() => window.removeEventListener("paste", pasteHandler, { capture: true }));
+
+		// Handle right-click: copy if selection, otherwise paste
+		termContainer.addEventListener("contextmenu", (event: MouseEvent) => {
+			if (!this.terminal) return;
+			const selected = this.terminal.getSelection();
+			if (selected) {
+				event.preventDefault();
+				navigator.clipboard.writeText(selected).catch(() => {});
+				this.terminal.clearSelection();
+			}
+			// If no selection, default context menu shows (browser handles paste)
+		});
+
+		// Handle IME composition (Chinese/Japanese/Korean input)
+		// The captureHandler skips keydown events during composition,
+		// so we need to send the final composed text via compositionend.
+		const compositionHandler = (event: CompositionEvent) => {
+			if (!this.termContainer?.contains(event.target as HTMLElement)) return;
+			if (event.data && this.ws && this.ws.readyState === WebSocket.OPEN) {
+				this.ws.send(JSON.stringify({ type: "input", data: event.data }));
+			}
+		};
+		termContainer.addEventListener("compositionend", compositionHandler);
+		this.register(() => termContainer.removeEventListener("compositionend", compositionHandler));
 
 		terminal.onResize(({ cols, rows }) => {
 			if (this.ws && this.ws.readyState === WebSocket.OPEN) {
