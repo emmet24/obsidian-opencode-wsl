@@ -22,7 +22,7 @@ export default class OpencodeWslPlugin extends Plugin {
 
 	async onload(): Promise<void> {
 		// Platform guard: WSL is Windows-only
-		if (process.platform !== "win32") {
+		if ((process.platform as string) !== "win32") {
 			new Notice("OpenCode WSL requires Windows + WSL");
 			return;
 		}
@@ -94,7 +94,7 @@ export default class OpencodeWslPlugin extends Plugin {
 				delete (merged as unknown as Record<string, unknown>)[key];
 			}
 		}
-		this.settings = merged as OpencodeWslSettings;
+		this.settings = merged;
 	}
 
 	async saveSettings(): Promise<void> {
