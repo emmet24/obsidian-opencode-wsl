@@ -29,7 +29,7 @@ const RESTART_NOTICE_THRESHOLD = 3;
 export class BridgeManager {
 	private plugin: OpencodeWslPlugin;
 	private child: ChildProcessLike | null = null;
-	private healthTimer: ReturnType<typeof setInterval> | null = null;
+	private healthTimer: number | null = null;
 	private shuttingDown = false;
 	private depsChecked = false;
 	private restartCount = 0;

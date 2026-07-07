@@ -91,7 +91,7 @@ export default class OpencodeWslPlugin extends Plugin {
 		// Strip keys not in DEFAULT_SETTINGS (schema drift cleanup)
 		for (const key of Object.keys(merged)) {
 			if (!(key in DEFAULT_SETTINGS)) {
-				delete (merged as Record<string, unknown>)[key];
+				delete (merged as unknown as Record<string, unknown>)[key];
 			}
 		}
 		this.settings = merged;
