@@ -70,7 +70,7 @@ export default class OpencodeWslPlugin extends Plugin {
 
 		const existing = workspace.getLeavesOfType(VIEW_TYPE_OPENCODE_WSL);
 		if (existing.length > 0) {
-			workspace.revealLeaf(existing[0]);
+			void workspace.revealLeaf(existing[0]);
 			return;
 		}
 
@@ -82,19 +82,19 @@ export default class OpencodeWslPlugin extends Plugin {
 			active: true,
 		});
 
-		workspace.revealLeaf(leaf);
+		void workspace.revealLeaf(leaf);
 	}
 
 	async loadSettings(): Promise<void> {
 		const data = (await this.loadData()) as Partial<OpencodeWslSettings> | null;
-		const merged = Object.assign({}, DEFAULT_SETTINGS, data ?? {}) as OpencodeWslSettings;
+		const merged = Object.assign({}, DEFAULT_SETTINGS, data ?? {});
 		// Strip keys not in DEFAULT_SETTINGS (schema drift cleanup)
 		for (const key of Object.keys(merged)) {
 			if (!(key in DEFAULT_SETTINGS)) {
 				delete (merged as unknown as Record<string, unknown>)[key];
 			}
 		}
-		this.settings = merged;
+		this.settings = merged as OpencodeWslSettings;
 	}
 
 	async saveSettings(): Promise<void> {
@@ -106,11 +106,10 @@ export default class OpencodeWslPlugin extends Plugin {
 		}
 	}
 
-	private detectWslVaultPath(): string | null {
+private detectWslVaultPath(): string | null {
 		try {
-			const adapter = this.app.vault.adapter;
-			if (!("getBasePath" in adapter)) return null;
-			const winPath = (adapter as any).getBasePath() as string;
+			const adapter = this.app.vault.adapter as unknown as { getBasePath(): string };
+			const winPath: string = adapter.getBasePath();
 			const match = winPath.match(/^([A-Za-z]):(.*)$/);
 			if (!match) return null;
 			return `/mnt/${match[1].toLowerCase()}${match[2].replace(/\\/g, "/")}`;

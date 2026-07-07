@@ -171,7 +171,7 @@ export class OpencodeWslView extends ItemView {
 		window.setTimeout(() => this.fitTerminal(), 100);
 		window.setTimeout(() => this.fitTerminal(), 300);
 
-		this.plugin.bridgeManager?.start();
+		void this.plugin.bridgeManager?.start();
 		this.connectAttempts = 0;
 		this.connectWebSocket();
 	}

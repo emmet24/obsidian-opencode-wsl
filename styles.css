@@ -155,25 +155,7 @@
 	opacity: 1;
 }
 
-.xterm-underline-1 { text-decoration: underline; }
-.xterm-underline-2 { text-decoration: underline; text-decoration-style: double; }
-.xterm-underline-3 { text-decoration: underline; text-decoration-style: wavy; }
-.xterm-underline-4 { text-decoration: underline; text-decoration-style: dotted; }
-.xterm-underline-5 { text-decoration: underline; text-decoration-style: dashed; }
 
-.xterm-overline {
-	text-decoration: overline;
-}
-
-.xterm-overline.xterm-underline-1 { text-decoration: underline overline; }
-.xterm-overline.xterm-underline-2 { text-decoration: underline overline; text-decoration-style: double; }
-.xterm-overline.xterm-underline-3 { text-decoration: underline overline; text-decoration-style: wavy; }
-.xterm-overline.xterm-underline-4 { text-decoration: underline overline; text-decoration-style: dotted; }
-.xterm-overline.xterm-underline-5 { text-decoration: underline overline; text-decoration-style: dashed; }
-
-.xterm-strikethrough {
-	text-decoration: line-through;
-}
 
 .xterm-screen .xterm-decoration-container .xterm-decoration {
 	z-index: 6;

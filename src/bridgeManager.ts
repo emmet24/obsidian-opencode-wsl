@@ -2,25 +2,10 @@ import type OpencodeWslPlugin from "./main";
 import type { OpencodeWslSettings } from "./settings";
 import { Notice } from "obsidian";
 import { BRIDGE_JS_BASE64 } from "./bridgeEmbed";
+import { spawn } from "child_process";
+import { existsSync, writeFileSync } from "fs";
 
-interface NodeChildProcess {
-	spawn(command: string, args: string[], options: {
-		cwd?: string;
-		env?: Record<string, string>;
-		stdio?: string[];
-		windowsHide?: boolean;
-		timeout?: number;
-	}): ChildProcessLike;
-	execSync(command: string, options: { encoding: string; timeout: number }): Buffer;
-}
-
-interface ChildProcessLike {
-	pid: number | undefined;
-	stdout: { on(event: string, cb: (data: Buffer) => void): void } | null;
-	stderr: { on(event: string, cb: (data: Buffer) => void): void } | null;
-	on(event: "exit" | "error", cb: (code?: number | null, signal?: string | null) => void): void;
-	kill(signal?: string): void;
-}
+type ChildProcessHandle = ReturnType<typeof spawn>;
 
 const RESTART_BACKOFF_BASE_MS = 5000;
 const RESTART_BACKOFF_MAX_MS = 120000;
@@ -28,7 +13,7 @@ const RESTART_NOTICE_THRESHOLD = 3;
 
 export class BridgeManager {
 	private plugin: OpencodeWslPlugin;
-	private child: ChildProcessLike | null = null;
+	private child: ChildProcessHandle | null = null;
 	private healthTimer: number | null = null;
 	private shuttingDown = false;
 	private depsChecked = false;
@@ -59,29 +44,17 @@ export class BridgeManager {
 
 		// Ensure bridge.js exists on disk (extract from embedded source)
 		try {
-			const fs = window.require("fs") as {
-				existsSync: (p: string) => boolean;
-				writeFileSync: (p: string, d: string) => void;
-			};
-			if (!fs.existsSync(`${bridgeDir}/bridge.js`)) {
+			if (!existsSync(`${bridgeDir}/bridge.js`)) {
 				const content = Buffer.from(BRIDGE_JS_BASE64, "base64").toString("utf-8");
-				fs.writeFileSync(`${bridgeDir}/bridge.js`, content);
+				writeFileSync(`${bridgeDir}/bridge.js`, content);
 				console.log("[opencode-wsl] Extracted bridge.js from embedded source");
 			}
 		} catch (err) {
 			console.warn("[opencode-wsl] Could not write bridge.js:", err);
 		}
 
-		let cp: NodeChildProcess;
-		try {
-			cp = window.require("child_process") as NodeChildProcess;
-		} catch {
-			console.error("[opencode-wsl] child_process not available");
-			return false;
-		}
-
 		if (!this.depsChecked) {
-			const depsReady = await this.ensureDependencies(cp);
+			const depsReady = await this.ensureDependencies();
 			if (!depsReady) {
 				console.error("[opencode-wsl] Native dependencies not available, cannot start bridge");
 				return false;
@@ -105,7 +78,7 @@ export class BridgeManager {
 		console.log(`[opencode-wsl] Starting bridge: wsl.exe ${wslArgs.join(" ")}`);
 
 		try {
-			const proc = cp.spawn("wsl.exe", wslArgs, {
+			const proc = spawn("wsl.exe", wslArgs, {
 				windowsHide: true,
 				stdio: ["ignore", "pipe", "pipe"],
 			});
@@ -185,8 +158,8 @@ export class BridgeManager {
 		return this.start();
 	}
 
-	private execWslWait(cp: NodeChildProcess, args: string[], timeoutMs = 120000): Promise<number | null> {
-		const proc = this.execWsl(cp, args);
+	private execWslWait(args: string[], timeoutMs = 120000): Promise<number | null> {
+		const proc = this.execWsl(args);
 		if (!proc) return Promise.reject(new Error("Failed to spawn WSL"));
 		return new Promise((resolve) => {
 			const timer = window.setTimeout(() => { try { proc.kill(); } catch {} resolve(null); }, timeoutMs);
@@ -196,24 +169,24 @@ export class BridgeManager {
 		});
 	}
 
-	private async wslTestFile(cp: NodeChildProcess, path: string): Promise<boolean> {
-		const proc = this.execWsl(cp, this.buildWslArgs(["test", "-f", path]));
+	private async wslTestFile(path: string): Promise<boolean> {
+		const proc = this.execWsl(this.buildWslArgs(["test", "-f", path]));
 		if (!proc) return false;
 		return new Promise((r) => proc.on("exit", (c) => r(c === 0)));
 	}
 
-	private async ensureDependencies(cp: NodeChildProcess): Promise<boolean> {
+	private async ensureDependencies(): Promise<boolean> {
 		const bridgeDir = this.plugin.bridgeScriptDir;
 		const ptyPath = `${bridgeDir}/node_modules/node-pty/build/Release/pty.node`;
 		const pkgPath = `${bridgeDir}/node_modules/node-pty/package.json`;
 
 		// Already compiled
-		if (await this.wslTestFile(cp, ptyPath)) return true;
+		if (await this.wslTestFile(ptyPath)) return true;
 
 		// Package not installed at all → auto-install (npm handles prebuilt binaries)
-		if (!(await this.wslTestFile(cp, pkgPath))) {
+		if (!(await this.wslTestFile(pkgPath))) {
 			console.log("[opencode-wsl] Installing node-pty and ws in WSL...");
-			const code = await this.execWslWait(cp, this.buildWslArgs([
+			const code = await this.execWslWait(this.buildWslArgs([
 				"npm", "install", "node-pty", "ws",
 				"--prefix", bridgeDir,
 			]));
@@ -224,7 +197,7 @@ export class BridgeManager {
 		} else {
 			// Package installed but not compiled → rebuild
 			console.log("[opencode-wsl] Rebuilding node-pty native binding...");
-			const code = await this.execWslWait(cp, this.buildWslArgs([
+			const code = await this.execWslWait(this.buildWslArgs([
 				"npm", "rebuild", "node-pty", "--prefix", bridgeDir,
 			]));
 			if (code !== 0) {
@@ -233,7 +206,7 @@ export class BridgeManager {
 			}
 		}
 
-		return await this.wslTestFile(cp, ptyPath);
+		return await this.wslTestFile(ptyPath);
 	}
 
 	private buildWslArgs(cmd: string[]): string[] {
@@ -244,9 +217,9 @@ export class BridgeManager {
 		return args;
 	}
 
-	private execWsl(cp: NodeChildProcess, args: string[]): ChildProcessLike | null {
+	private execWsl(args: string[]): ChildProcessHandle | null {
 		try {
-			return cp.spawn("wsl.exe", args, { windowsHide: true, stdio: ["ignore", "pipe", "pipe"] });
+			return spawn("wsl.exe", args, { windowsHide: true, stdio: ["ignore", "pipe", "pipe"] });
 		} catch {
 			console.warn("[opencode-wsl] Failed to exec WSL command");
 			return null;
