@@ -28,11 +28,19 @@ export function spawnWslProcess(args: string[]): WslProcess | null {
 		return {
 			get pid() { return proc.pid; },
 			get running() { return proc.exitCode === null && proc.killed === false; },
-			kill: (s) => { proc.kill(s as any); },
+			kill: (signal) => { proc.kill(signal as NodeJS.Signals); },
 			onExit: (cb) => { proc.on("exit", cb); },
 			onError: (cb) => { proc.on("error", cb); },
-			onStdout: (cb) => { proc.stdout?.on("data", (d: Buffer) => cb(d.toString().trim())); },
-			onStderr: (cb) => { proc.stderr?.on("data", (d: Buffer) => cb(d.toString().trim())); },
+			onStdout: (cb) => {
+				if (proc.stdout) {
+					proc.stdout.on("data", (d: Buffer) => cb(d.toString().trim()));
+				}
+			},
+			onStderr: (cb) => {
+				if (proc.stderr) {
+					proc.stderr.on("data", (d: Buffer) => cb(d.toString().trim()));
+				}
+			},
 		};
 	} catch {
 		return null;
@@ -43,10 +51,10 @@ export function execWslWait(args: string[], timeoutMs = 120000): Promise<number 
 	const proc = spawnWslProcess(args);
 	if (!proc) return Promise.reject(new Error("Failed to spawn WSL"));
 	return new Promise((resolve) => {
-		const timer = setTimeout(() => { proc.kill(); resolve(null); }, timeoutMs);
+		const timer = window.setTimeout(() => { proc.kill(); resolve(null); }, timeoutMs);
 		proc.onStdout((d) => console.log(`[wsl] ${d}`));
 		proc.onStderr((d) => console.warn(`[wsl] ${d}`));
-		proc.onExit((code) => { clearTimeout(timer); resolve(code ?? null); });
+		proc.onExit((code) => { window.clearTimeout(timer); resolve(code ?? null); });
 	});
 }
 
