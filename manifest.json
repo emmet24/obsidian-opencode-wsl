@@ -5,7 +5,7 @@
 	"minAppVersion": "1.7.2",
 	"description": "Embed OpenCode TUI in the Obsidian sidebar via a lightweight WebSocket bridge to WSL.",
 	"author": "emmet24",
-	"authorUrl": "https://github.com/emmet24/obsidian-opencode-wsl",
+	"authorUrl": "https://github.com/emmet24",
 	"fundingUrl": "https://github.com/emmet24/obsidian-opencode-wsl",
 	"isDesktopOnly": true
 }

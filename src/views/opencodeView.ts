@@ -46,8 +46,9 @@ export class OpencodeWslView extends ItemView {
 
 	async onOpen(): Promise<void> {
 		// Handle deferred views (Obsidian 1.7.2+)
-		if ((this.leaf as any).isDeferred) {
-			await (this.leaf as any).loadIfDeferred();
+		const leaf = this.leaf as unknown as { isDeferred?: boolean; loadIfDeferred?: () => Promise<void> };
+		if (leaf.isDeferred) {
+			await leaf.loadIfDeferred?.();
 		}
 
 		const container = this.containerEl.children[1];
@@ -166,9 +167,9 @@ export class OpencodeWslView extends ItemView {
 			window.removeEventListener("resize", this.fitTerminal)
 		);
 
-		setTimeout(() => this.fitTerminal(), 0);
-		setTimeout(() => this.fitTerminal(), 100);
-		setTimeout(() => this.fitTerminal(), 300);
+		window.setTimeout(() => this.fitTerminal(), 0);
+		window.setTimeout(() => this.fitTerminal(), 100);
+		window.setTimeout(() => this.fitTerminal(), 300);
 
 		this.plugin.bridgeManager?.start();
 		this.connectAttempts = 0;
@@ -184,7 +185,7 @@ export class OpencodeWslView extends ItemView {
 		}
 
 		if (this.reconnectTimer !== null) {
-			clearTimeout(this.reconnectTimer);
+			window.clearTimeout(this.reconnectTimer);
 			this.reconnectTimer = null;
 		}
 
@@ -198,7 +199,7 @@ export class OpencodeWslView extends ItemView {
 		if (this.terminal) {
 			try {
 				this.terminal.dispose();
-			} catch (e) {
+			} catch {
 				// dispose can throw if already disposed
 			}
 			this.terminal = null;
@@ -228,21 +229,21 @@ export class OpencodeWslView extends ItemView {
 
 		try {
 			const ws = new WebSocket(url);
-			const timeout = setTimeout(() => {
+			const timeout = window.setTimeout(() => {
 				if (ws.readyState !== WebSocket.OPEN) {
 					ws.close();
 				}
 			}, 5000);
 
 			ws.onopen = () => {
-				clearTimeout(timeout);
+				window.clearTimeout(timeout);
 				this.onWsOpen();
 			};
 			ws.onmessage = (event: MessageEvent) => {
 				this.onWsMessage(event);
 			};
 			ws.onclose = () => {
-				clearTimeout(timeout);
+				window.clearTimeout(timeout);
 				this.onWsClose();
 			};
 			ws.onerror = () => {
@@ -277,7 +278,7 @@ export class OpencodeWslView extends ItemView {
 
 		try {
 			this.fitAddon.fit();
-		} catch (e) {
+		} catch {
 			// ignore
 		}
 
@@ -302,7 +303,7 @@ export class OpencodeWslView extends ItemView {
 		if (!this.terminal) return;
 
 		try {
-			const msg: WsMessage = JSON.parse(event.data as string);
+			const msg = JSON.parse(event.data as string) as WsMessage;
 
 			switch (msg.type) {
 				case "output":
@@ -325,7 +326,7 @@ export class OpencodeWslView extends ItemView {
 					}
 					break;
 			}
-		} catch (e) {
+		} catch {
 			if (this.terminal) {
 				this.terminal.write(event.data as string);
 			}
@@ -344,7 +345,7 @@ export class OpencodeWslView extends ItemView {
 	private scheduleReconnect(): void {
 		if (!this.shouldReconnect) return;
 
-		this.reconnectTimer = window.setTimeout(() => {
+		this.reconnectTimer = window.window.setTimeout(() => {
 			if (!this.shouldReconnect) return;
 			this.connectWebSocket();
 		}, this.plugin.settings.reconnectDelay);
@@ -358,7 +359,7 @@ export class OpencodeWslView extends ItemView {
 		) {
 			try {
 				this.fitAddon.fit();
-			} catch (e) {
+			} catch {
 				// fit can fail during rapid layout changes (e.g. sidebar resize)
 			}
 		}

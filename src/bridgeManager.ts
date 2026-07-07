@@ -1,6 +1,7 @@
 import type OpencodeWslPlugin from "./main";
 import type { OpencodeWslSettings } from "./settings";
 import { Notice } from "obsidian";
+import { BRIDGE_JS_BASE64 } from "./bridgeEmbed";
 
 interface NodeChildProcess {
 	spawn(command: string, args: string[], options: {
@@ -56,9 +57,24 @@ export class BridgeManager {
 		}
 		const settings: OpencodeWslSettings = this.plugin.settings;
 
+		// Ensure bridge.js exists on disk (extract from embedded source)
+		try {
+			const fs = window.require("fs") as {
+				existsSync: (p: string) => boolean;
+				writeFileSync: (p: string, d: string) => void;
+			};
+			if (!fs.existsSync(`${bridgeDir}/bridge.js`)) {
+				const content = Buffer.from(BRIDGE_JS_BASE64, "base64").toString("utf-8");
+				fs.writeFileSync(`${bridgeDir}/bridge.js`, content);
+				console.log("[opencode-wsl] Extracted bridge.js from embedded source");
+			}
+		} catch (err) {
+			console.warn("[opencode-wsl] Could not write bridge.js:", err);
+		}
+
 		let cp: NodeChildProcess;
 		try {
-			cp = require("child_process") as NodeChildProcess;
+			cp = window.require("child_process") as NodeChildProcess;
 		} catch {
 			console.error("[opencode-wsl] child_process not available");
 			return false;
@@ -123,7 +139,7 @@ export class BridgeManager {
 
 			this.child = proc;
 
-			await new Promise<void>((resolve) => setTimeout(resolve, 800));
+			await new Promise<void>((resolve) => window.setTimeout(resolve, 800));
 			if (!this.child) return false;
 
 			console.log(`[opencode-wsl] Bridge started (pid=${proc.pid})`);
@@ -148,12 +164,12 @@ export class BridgeManager {
 		try {
 			proc.kill("SIGTERM");
 			await new Promise<void>((resolve) => {
-				const timer = setTimeout(() => {
+				const timer = window.setTimeout(() => {
 					try { proc.kill("SIGKILL"); } catch { /* already dead */ }
 					resolve();
 				}, 3000);
 				proc.on("exit", () => {
-					clearTimeout(timer);
+					window.clearTimeout(timer);
 					resolve();
 				});
 			});
@@ -173,10 +189,10 @@ export class BridgeManager {
 		const proc = this.execWsl(cp, args);
 		if (!proc) return Promise.reject(new Error("Failed to spawn WSL"));
 		return new Promise((resolve) => {
-			const timer = setTimeout(() => { try { proc.kill(); } catch {} resolve(null); }, timeoutMs);
+			const timer = window.setTimeout(() => { try { proc.kill(); } catch {} resolve(null); }, timeoutMs);
 			proc.stdout?.on("data", (d: Buffer) => console.log(`[wsl] ${d.toString().trim()}`));
 			proc.stderr?.on("data", (d: Buffer) => console.warn(`[wsl] ${d.toString().trim()}`));
-			proc.on("exit", (code) => { clearTimeout(timer); resolve(code ?? null); });
+			proc.on("exit", (code) => { window.clearTimeout(timer); resolve(code ?? null); });
 		});
 	}
 
@@ -239,7 +255,7 @@ export class BridgeManager {
 
 	private startHealthCheck(): void {
 		this.stopHealthCheck();
-		this.healthTimer = setInterval(() => {
+		this.healthTimer = window.setInterval(() => {
 			if (this.child) return;
 			this.restartCount++;
 			if (this.restartCount >= RESTART_NOTICE_THRESHOLD) {
@@ -251,13 +267,13 @@ export class BridgeManager {
 			);
 			this.restartBackoff = Math.max(this.restartBackoff, delay);
 			console.log(`[opencode-wsl] Bridge not running, retrying in ${delay}ms...`);
-			setTimeout(() => this.start(), delay);
+			window.setTimeout(() => this.start(), delay);
 		}, RESTART_BACKOFF_BASE_MS);
 	}
 
 	private stopHealthCheck(): void {
 		if (this.healthTimer) {
-			clearInterval(this.healthTimer);
+			window.clearInterval(this.healthTimer);
 			this.healthTimer = null;
 		}
 	}

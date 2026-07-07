@@ -257,3 +257,11 @@
 .mod-right-split .opencode-wsl-view {
 	width: 100%;
 }
+
+.opencode-wsl-slider-value {
+	margin-left: 8px;
+	min-width: 24px;
+	display: inline-block;
+	text-align: center;
+	font-variant-numeric: tabular-nums;
+}

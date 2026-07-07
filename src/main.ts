@@ -44,21 +44,21 @@ export default class OpencodeWslPlugin extends Plugin {
 		);
 
 		this.addRibbonIcon("terminal", "OpenCode WSL", () => {
-			this.activateView();
+			void this.activateView();
 		});
 
 		this.addCommand({
-			id: "toggle-opencode-wsl-terminal",
+			id: "toggle-terminal",
 			name: "OpenCode: Toggle WSL Terminal",
 			callback: () => {
-				this.activateView();
+				void this.activateView();
 			},
 		});
 
 		this.addSettingTab(new OpencodeWslSettingTab(this.app, this));
 	}
 
-	async onunload(): Promise<void> {
+	onunload(): void {
 		this.bridgeManager.destroy();
 		this.app.workspace
 			.getLeavesOfType(VIEW_TYPE_OPENCODE_WSL)
@@ -86,12 +86,12 @@ export default class OpencodeWslPlugin extends Plugin {
 	}
 
 	async loadSettings(): Promise<void> {
-		const data = await this.loadData();
+		const data = (await this.loadData()) as Partial<OpencodeWslSettings> | null;
 		const merged = Object.assign({}, DEFAULT_SETTINGS, data ?? {}) as OpencodeWslSettings;
 		// Strip keys not in DEFAULT_SETTINGS (schema drift cleanup)
 		for (const key of Object.keys(merged)) {
 			if (!(key in DEFAULT_SETTINGS)) {
-				delete (merged as any)[key];
+				delete (merged as Record<string, unknown>)[key];
 			}
 		}
 		this.settings = merged;
@@ -108,9 +108,9 @@ export default class OpencodeWslPlugin extends Plugin {
 
 	private detectWslVaultPath(): string | null {
 		try {
-			const adapter = this.app.vault.adapter as any;
-			if (typeof adapter.getBasePath !== "function") return null;
-			const winPath: string = adapter.getBasePath();
+			const adapter = this.app.vault.adapter;
+			if (!("getBasePath" in adapter)) return null;
+			const winPath = (adapter as any).getBasePath() as string;
 			const match = winPath.match(/^([A-Za-z]):(.*)$/);
 			if (!match) return null;
 			return `/mnt/${match[1].toLowerCase()}${match[2].replace(/\\/g, "/")}`;
@@ -184,8 +184,7 @@ class OpencodeWslSettingTab extends PluginSettingTab {
 			.setName("Terminal font size")
 			.setDesc("Font size for the terminal (8–32)")
 			.addSlider((slider) => {
-				const valueLabel = createSpan({ text: String(this.plugin.settings.fontSize) });
-				valueLabel.style.cssText = "margin-left:8px;min-width:24px;display:inline-block;text-align:center;font-variant-numeric:tabular-nums;";
+				const valueLabel = createSpan({ text: String(this.plugin.settings.fontSize), cls: "opencode-wsl-slider-value" });
 				slider
 					.setLimits(8, 32, 1)
 					.setValue(this.plugin.settings.fontSize)
@@ -214,8 +213,7 @@ class OpencodeWslSettingTab extends PluginSettingTab {
 			.setName("Reconnect delay")
 			.setDesc("Milliseconds to wait before reconnecting on disconnect")
 			.addSlider((slider) => {
-				const valueLabel = createSpan({ text: `${this.plugin.settings.reconnectDelay}ms` });
-				valueLabel.style.cssText = "margin-left:8px;min-width:48px;display:inline-block;text-align:center;font-variant-numeric:tabular-nums;";
+				const valueLabel = createSpan({ text: `${this.plugin.settings.reconnectDelay}ms`, cls: "opencode-wsl-slider-value" });
 				slider
 					.setLimits(500, 30000, 500)
 					.setValue(this.plugin.settings.reconnectDelay)
@@ -231,8 +229,7 @@ class OpencodeWslSettingTab extends PluginSettingTab {
 			.setName("Scrollback buffer")
 			.setDesc("Number of lines to keep in scrollback")
 			.addSlider((slider) => {
-				const valueLabel = createSpan({ text: this.formatScrollback(this.plugin.settings.scrollback) });
-				valueLabel.style.cssText = "margin-left:8px;min-width:48px;display:inline-block;text-align:center;font-variant-numeric:tabular-nums;";
+				const valueLabel = createSpan({ text: this.formatScrollback(this.plugin.settings.scrollback), cls: "opencode-wsl-slider-value" });
 				slider
 					.setLimits(1000, 50000, 1000)
 					.setValue(this.plugin.settings.scrollback)
@@ -244,7 +241,7 @@ class OpencodeWslSettingTab extends PluginSettingTab {
 				slider.sliderEl.parentElement?.appendChild(valueLabel);
 			});
 
-		containerEl.createEl("h2", { text: "Bridge server" });
+		new Setting(containerEl).setName("Bridge server").setHeading();
 
 		new Setting(containerEl)
 			.setName("Node command")
