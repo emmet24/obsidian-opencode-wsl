@@ -37,7 +37,7 @@ Obsidian (Windows)                    WSL (Linux)
 1. Click the terminal icon in the left ribbon, or run `Toggle OpenCode panel` from the command palette
 2. The OpenCode server starts automatically inside WSL
 3. The OpenCode web UI appears in the right sidebar
-4. Use OpenCode as you would in a browser
+4. Select your vault project in the web UI to start
 
 ### Settings
 
@@ -46,8 +46,8 @@ Obsidian (Windows)                    WSL (Linux)
 | Server port | 14096 | Port for the OpenCode server |
 | WSL distribution | (default) | Leave empty to use the default WSL distro |
 | OpenCode path (WSL) | opencode | Path to the opencode executable inside WSL |
-| Working directory (WSL path) | auto-detected | Default working directory inside WSL |
-| Server password | (empty) | OPENCODE_SERVER_PASSWORD for auth |
+| Working directory (WSL path) | auto-detected | Working directory passed via `wsl.exe --cd` |
+| Server password | (empty) | `OPENCODE_SERVER_PASSWORD` for auth |
 
 ## Development
 
@@ -56,6 +56,29 @@ git clone https://github.com/emmet24/obsidian-opencode-wsl.git
 cd obsidian-opencode-wsl
 npm install
 npm run build
+```
+
+## Branches
+
+| Branch | Version | Approach |
+|--------|---------|----------|
+| `main` | 1.0.3 | PTY bridge + xterm.js TUI |
+| `feat/iframe-webui` | 1.1.0 | iframe embedding of OpenCode web UI |
+
+## Files
+
+```
+opencode-wsl/
+├── src/
+│   ├── main.ts           # Plugin entry, settings tab, view registration
+│   ├── settings.ts       # Settings interface and defaults
+│   ├── serverManager.ts  # WSL opencode serve process lifecycle
+│   └── views/
+│       └── opencodeView.ts  # iframe-based sidebar view
+├── esbuild.config.mjs    # Build configuration
+├── manifest.json         # Plugin metadata
+├── styles.css            # iframe and status styles
+└── package.json          # Dependencies
 ```
 
 ## Related
