@@ -180,6 +180,9 @@ export class ServerManager {
 		if (this.settings.wslDistro) {
 			args.push("-d", this.settings.wslDistro);
 		}
+		if (this.settings.cwd) {
+			args.push("--cd", this.settings.cwd);
+		}
 		args.push("--", ...cmdArgs);
 		return args;
 	}

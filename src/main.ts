@@ -22,6 +22,13 @@ export default class OpencodePlugin extends Plugin {
 
 		await this.loadSettings();
 
+		// Auto-detect vault WSL path for cwd
+		const wslPath = this.detectWslVaultPath();
+		if (wslPath && !this.settings.cwd) {
+			this.settings.cwd = wslPath;
+			await this.saveSettings();
+		}
+
 		this.serverManager = new ServerManager({
 			port: this.settings.port,
 			wslDistro: this.settings.wslDistro,
