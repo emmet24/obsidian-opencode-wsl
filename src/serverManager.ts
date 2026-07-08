@@ -48,10 +48,6 @@ export class ServerManager {
 			"--cors", "app://obsidian.md",
 		]);
 
-		if (this.settings.cwd) {
-			args.push("--dir", this.settings.cwd);
-		}
-
 		console.log(`[opencode-wsl] Starting: wsl.exe ${args.join(" ")}`);
 
 		const proc = this.spawnWsl(args);
