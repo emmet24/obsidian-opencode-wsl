@@ -84,8 +84,8 @@ opencode-wsl/
 
 | Branch | Version | Approach |
 |--------|---------|----------|
-| `main` | 1.0.3 | PTY bridge + xterm.js TUI |
-| `feat/iframe-webui` | 1.1.0 | iframe embedding of OpenCode web UI |
+| `main` | 2.0.0 | ✅ iframe embedding of OpenCode web UI (current) |
+| (git history) | 1.0.3 | PTY bridge + xterm.js TUI (archived) |
 
 ## Related
 
