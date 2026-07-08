@@ -109,12 +109,12 @@ export class ServerManager {
 				proc.kill("SIGTERM");
 			}
 			await new Promise<void>((resolve) => {
-				const timer = setTimeout(() => {
+				const timer = window.setTimeout(() => {
 					try { proc.kill("SIGKILL"); } catch { /* already dead */ }
 					resolve();
 				}, 3000);
 				proc.onExit(() => {
-					clearTimeout(timer);
+					window.clearTimeout(timer);
 					resolve();
 				});
 			});
@@ -127,7 +127,7 @@ export class ServerManager {
 
 	async restart(): Promise<boolean> {
 		await this.stop();
-		await new Promise((resolve) => setTimeout(resolve, 1000));
+		await new Promise((resolve) => window.setTimeout(resolve, 1000));
 		return this.start();
 	}
 
@@ -222,7 +222,7 @@ export class ServerManager {
 			}
 			return {
 				get pid() { return proc.pid; },
-				kill: (s) => { proc.kill(s as any); },
+				kill: (s) => { proc.kill(s as NodeJS.Signals); },
 				onExit: (cb) => { proc.on("exit", cb); },
 				onError: (cb) => { proc.on("error", cb); },
 			};
@@ -239,19 +239,19 @@ export class ServerManager {
 			});
 			let output = "";
 			let error = "";
-			const timer = setTimeout(() => {
+			const timer = window.setTimeout(() => {
 				proc.kill();
 				reject(new Error(`Timed out after ${timeoutMs}ms`));
 			}, timeoutMs);
 			proc.stdout?.on("data", (d: Buffer) => { output += d.toString(); });
 			proc.stderr?.on("data", (d: Buffer) => { error += d.toString(); });
 			proc.on("exit", (code) => {
-				clearTimeout(timer);
+				window.clearTimeout(timer);
 				if (code === 0) resolve(output);
 				else reject(new Error(error || `Exit code ${code}`));
 			});
 			proc.on("error", (err) => {
-				clearTimeout(timer);
+				window.clearTimeout(timer);
 				reject(err);
 			});
 		});
@@ -262,7 +262,7 @@ export class ServerManager {
 		while (Date.now() - start < timeoutMs) {
 			const healthy = await this.checkHealth();
 			if (healthy) return true;
-			await new Promise((resolve) => setTimeout(resolve, 500));
+			await new Promise((resolve) => window.setTimeout(resolve, 500));
 		}
 		return false;
 	}

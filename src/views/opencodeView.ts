@@ -99,17 +99,7 @@ export class OpencodeView extends ItemView {
 		if (!this.statusText || !this.iframe || !this.startBtn || !this.statusEl) return;
 		this.statusText.setText(message);
 		this.statusEl.className = `opencode-iframe-status opencode-iframe-status-${type}`;
-		if (type === "connected") {
-			this.statusEl.style.display = "none";
-			this.iframe.style.display = "flex";
-		} else if (type === "stopped") {
-			this.statusEl.style.display = "flex";
-			this.startBtn.style.display = "inline-block";
-			this.iframe.style.display = "none";
-		} else {
-			this.statusEl.style.display = "flex";
-			this.startBtn.style.display = "none";
-			this.iframe.style.display = "none";
-		}
+		this.iframe.className = `opencode-iframe opencode-iframe-${type}`;
+		this.startBtn.className = `opencode-iframe-start-btn opencode-iframe-start-${type}`;
 	}
 }

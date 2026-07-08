@@ -193,7 +193,7 @@ class OpencodeSettingTab extends PluginSettingTab {
 					}),
 			);
 
-		containerEl.createEl("h2", { text: "Server" });
+		new Setting(containerEl).setName("Server").setHeading();
 
 		const status = this.plugin.serverManager?.running ? "running" : "stopped";
 		new Setting(containerEl)
