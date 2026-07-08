@@ -138,17 +138,25 @@ export class ServerManager {
 
 	private async resolveCommand(): Promise<string | null> {
 		const cmd = this.settings.opencodePath || "opencode";
-		// If it's already a full path, use it directly
 		if (cmd.includes("/")) return cmd;
 
-		// Try to resolve via bash -c "command -v opencode" inside WSL
-		const resolveArgs = this.buildWslArgs(["bash", "-lc", `command -v "${cmd}"`]);
-		try {
-			const result = await this.execWslCapture(resolveArgs);
-			const resolved = result.trim().split("\n")[0];
-			if (resolved) return resolved;
-		} catch {
-			// Fall through to default
+		// Try to resolve via bash in WSL
+		// WSL non-interactive doesn't load .bashrc, so we check common paths
+		const checks = [
+			`bash -c 'command -v "${cmd}" 2>/dev/null'`,
+			`bash -c 'ls -d /home/*/.opencode/bin/${cmd} 2>/dev/null'`,
+			`bash -c 'ls -d /root/.opencode/bin/${cmd} 2>/dev/null'`,
+			`bash -c 'ls -d /usr/local/bin/${cmd} 2>/dev/null'`,
+		];
+
+		for (const check of checks) {
+			try {
+				const result = await this.execWslCapture(this.buildWslArgs(check.split(/\s+/)));
+				const resolved = result.trim().split("\n")[0];
+				if (resolved && !resolved.includes("No such")) return resolved;
+			} catch {
+				// Try next
+			}
 		}
 		return cmd;
 	}
