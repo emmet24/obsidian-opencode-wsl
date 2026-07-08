@@ -48,20 +48,20 @@ export function wslExecCapture(args: string[], timeoutMs = 10000): Promise<strin
 		};
 		let output = "";
 		let error = "";
-		const timer = setTimeout(() => {
+		const timer = window.setTimeout(() => {
 			raw.kill();
 			reject(new Error(`Timed out after ${timeoutMs}ms`));
 		}, timeoutMs);
 		raw.stdout?.on("data", (d: Buffer) => { output += d.toString(); });
 		raw.stderr?.on("data", (d: Buffer) => { error += d.toString(); });
 		raw.on("exit", (code) => {
-			clearTimeout(timer);
+			window.clearTimeout(timer);
 			if (code === 0) resolve(output);
 			else reject(new Error(error || `Exit code ${code}`));
 		});
 		raw.on("error", (err) => {
-			clearTimeout(timer);
-			reject(err);
+			window.clearTimeout(timer);
+			reject(new Error(String(err)));
 		});
 	});
 }
