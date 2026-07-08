@@ -39,10 +39,16 @@ Obsidian (Windows)                    WSL (Linux)
 3. The OpenCode web UI appears in the right sidebar
 4. Select your vault project in the web UI to start
 
+### Auto-start
+
+When enabled (default), the server starts automatically when you open the sidebar panel.
+When disabled, click "Start OpenCode" in the panel to launch the server manually.
+
 ### Settings
 
 | Setting | Default | Description |
 |---------|---------|-------------|
+| Auto-start server | ON | Start server automatically when panel opens |
 | Server port | 14096 | Port for the OpenCode server |
 | WSL distribution | (default) | Leave empty to use the default WSL distro |
 | OpenCode path (WSL) | opencode | Path to the opencode executable inside WSL |
@@ -57,13 +63,6 @@ cd obsidian-opencode-wsl
 npm install
 npm run build
 ```
-
-## Branches
-
-| Branch | Version | Approach |
-|--------|---------|----------|
-| `main` | 1.0.3 | PTY bridge + xterm.js TUI |
-| `feat/iframe-webui` | 1.1.0 | iframe embedding of OpenCode web UI |
 
 ## Files
 
@@ -80,6 +79,13 @@ opencode-wsl/
 ├── styles.css            # iframe and status styles
 └── package.json          # Dependencies
 ```
+
+## Branches
+
+| Branch | Version | Approach |
+|--------|---------|----------|
+| `main` | 1.0.3 | PTY bridge + xterm.js TUI |
+| `feat/iframe-webui` | 1.1.0 | iframe embedding of OpenCode web UI |
 
 ## Related
 
