@@ -1,8 +1,8 @@
 node_modules/
 main.js
 bridge.js
-src/bridgeEmbed.ts
 data.json
 *.env
 .DS_Store
-*.tsbuildinfo*.bak
+*.tsbuildinfo
+*.bak

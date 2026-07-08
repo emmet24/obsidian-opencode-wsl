@@ -1,21 +1,19 @@
-export interface OpencodeWslSettings {
-	bridgePort: number;
-	fontSize: number;
-	fontFamily: string;
-	cwd: string;
+export interface OpencodeSettings {
+	port: number;
+	hostname: string;
+	autoStart: boolean;
 	wslDistro: string;
-	reconnectDelay: number;
-	scrollback: number;
-	nodeCommand: string;
+	opencodePath: string;
+	cwd: string;
+	serverPassword: string;
 }
 
-export const DEFAULT_SETTINGS: OpencodeWslSettings = {
-	bridgePort: 8765,
-	fontSize: 14,
-	fontFamily: "'MesloLGS NF', 'JetBrains Mono', 'Fira Code', monospace",
-	cwd: "",
+export const DEFAULT_SETTINGS: OpencodeSettings = {
+	port: 14096,
+	hostname: "127.0.0.1",
+	autoStart: true,
 	wslDistro: "",
-	reconnectDelay: 2000,
-	scrollback: 10000,
-	nodeCommand: "node",
+	opencodePath: "opencode",
+	cwd: "",
+	serverPassword: "",
 };
