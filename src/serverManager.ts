@@ -140,20 +140,38 @@ export class ServerManager {
 		const cmd = this.settings.opencodePath || "opencode";
 		if (cmd.includes("/")) return cmd;
 
-		// Try to resolve via bash in WSL
-		// WSL non-interactive doesn't load .bashrc, so we check common paths
-		const checks = [
-			`bash -c 'command -v "${cmd}" 2>/dev/null'`,
-			`bash -c 'ls -d /home/*/.opencode/bin/${cmd} 2>/dev/null'`,
-			`bash -c 'ls -d /root/.opencode/bin/${cmd} 2>/dev/null'`,
-			`bash -c 'ls -d /usr/local/bin/${cmd} 2>/dev/null'`,
-		];
+		// WSL non-interactive doesn't load .bashrc, so use interactive mode to resolve
+		try {
+			const result = await this.execWslCapture(
+				this.buildWslArgs(["bash", "-i", "-c", `command -v "${cmd}" 2>/dev/null || echo MISSING`]),
+			);
+			const resolved = result.trim().split("\n")[0];
+			if (resolved && resolved !== "MISSING" && !resolved.includes("bash:") && !resolved.includes("No such")) {
+				return resolved;
+			}
+		} catch {
+			// Fall through
+		}
 
-		for (const check of checks) {
+		// Fallback: check common paths
+		const homeCheck = await this.execWslCapture(
+			this.buildWslArgs(["bash", "-c", `echo $HOME`]),
+		).catch(() => "/root");
+		const home = homeCheck.trim() || "/root";
+
+		const candidates = [
+			`${home}/.opencode/bin/${cmd}`,
+			`${home}/.npm/bin/${cmd}`,
+			`${home}/.local/bin/${cmd}`,
+			`/usr/local/bin/${cmd}`,
+			`/usr/bin/${cmd}`,
+		];
+		for (const c of candidates) {
 			try {
-				const result = await this.execWslCapture(this.buildWslArgs(check.split(/\s+/)));
-				const resolved = result.trim().split("\n")[0];
-				if (resolved && !resolved.includes("No such")) return resolved;
+				const result = await this.execWslCapture(
+					this.buildWslArgs(["test", "-x", c, "&&", "echo", "FOUND", "||", "echo", "NO"]),
+				);
+				if (result.trim() === "FOUND") return c;
 			} catch {
 				// Try next
 			}
