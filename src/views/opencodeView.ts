@@ -42,7 +42,7 @@ export class OpencodeView extends ItemView {
 			text: "Start OpenCode",
 		});
 		startBtn.addEventListener("click", () => {
-			this.startServer();
+			void this.startServer();
 		});
 		this.statusEl = statusEl;
 		this.statusText = statusText;
@@ -58,7 +58,7 @@ export class OpencodeView extends ItemView {
 		});
 
 		if (this.plugin.settings.autoStart || this.plugin.serverManager.running) {
-			this.startServer();
+			void this.startServer();
 		} else {
 			this.showStatus("Click 'Start OpenCode' to launch", "stopped");
 		}

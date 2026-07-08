@@ -1,4 +1,5 @@
 import { spawn } from "child_process";
+import { requestUrl } from "obsidian";
 
 const HEALTH_CHECK_INTERVAL = 10000;
 const START_TIMEOUT = 15000;
@@ -134,9 +135,9 @@ export class ServerManager {
 	async checkHealth(): Promise<boolean> {
 		try {
 			const url = `http://127.0.0.1:${this.settings.port}/global/health`;
-			const response = await fetch(url, { signal: AbortSignal.timeout(3000) });
-			if (response.ok) {
-				const data = await response.json() as { healthy?: boolean };
+			const response = await requestUrl({ url, method: "GET" });
+			if (response.status === 200) {
+				const data = response.json as { healthy?: boolean };
 				return data.healthy === true;
 			}
 			return false;
@@ -274,7 +275,7 @@ export class ServerManager {
 			this.checkHealth().then((healthy) => {
 				if (!healthy && !this.child) {
 					console.log("[opencode-wsl] Server not healthy, attempting restart...");
-					this.start();
+					void this.start();
 				}
 			});
 		}, HEALTH_CHECK_INTERVAL);
