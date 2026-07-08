@@ -11,7 +11,7 @@ export interface OpencodeSettings {
 export const DEFAULT_SETTINGS: OpencodeSettings = {
 	port: 14096,
 	hostname: "127.0.0.1",
-	autoStart: false,
+	autoStart: true,
 	wslDistro: "",
 	opencodePath: "opencode",
 	cwd: "",

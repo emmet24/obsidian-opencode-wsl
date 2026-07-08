@@ -114,6 +114,18 @@ class OpencodeSettingTab extends PluginSettingTab {
 		containerEl.empty();
 
 		new Setting(containerEl)
+			.setName("Auto-start server")
+			.setDesc("Automatically start the OpenCode server when the panel opens")
+			.addToggle((toggle) =>
+				toggle
+					.setValue(this.plugin.settings.autoStart)
+					.onChange(async (value) => {
+						this.plugin.settings.autoStart = value;
+						await this.plugin.saveSettings();
+					}),
+			);
+
+		new Setting(containerEl)
 			.setName("Server port")
 			.setDesc("Port for the OpenCode server")
 			.addText((text) =>

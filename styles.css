@@ -47,3 +47,19 @@
 .opencode-iframe-status-connected {
 	display: none;
 }
+
+.opencode-iframe-start-btn {
+	display: inline-block;
+	margin: 0 auto;
+	padding: 8px 24px;
+	background: var(--interactive-accent);
+	color: var(--text-on-accent);
+	border: none;
+	border-radius: 6px;
+	cursor: pointer;
+	font-size: 14px;
+}
+
+.opencode-iframe-start-btn:hover {
+	opacity: 0.9;
+}
