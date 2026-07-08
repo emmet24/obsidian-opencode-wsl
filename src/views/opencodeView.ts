@@ -57,7 +57,7 @@ export class OpencodeView extends ItemView {
 			},
 		});
 
-		if (this.plugin.settings.autoStart) {
+		if (this.plugin.settings.autoStart || this.plugin.serverManager.running) {
 			this.startServer();
 		} else {
 			this.showStatus("Click 'Start OpenCode' to launch", "stopped");
