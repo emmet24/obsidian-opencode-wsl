@@ -6,3 +6,4 @@ data.json
 *.env
 .DS_Store
 *.tsbuildinfo*.bak
+*.bak

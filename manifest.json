@@ -1,9 +1,9 @@
 {
 	"id": "opencode-wsl",
 	"name": "OpenCode WSL",
-	"version": "1.0.3",
-	"minAppVersion": "1.7.2",
-	"description": "Embed OpenCode TUI in the sidebar via a lightweight WebSocket bridge to WSL.",
+	"version": "1.1.0",
+	"minAppVersion": "1.4.0",
+	"description": "Embed OpenCode web UI in the sidebar via WSL bridge.",
 	"author": "emmet24",
 	"authorUrl": "https://github.com/emmet24",
 	"fundingUrl": "https://github.com/emmet24/obsidian-opencode-wsl",

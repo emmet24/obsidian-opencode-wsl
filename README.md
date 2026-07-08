@@ -1,47 +1,30 @@
 # OpenCode WSL — Obsidian Plugin
 
-Embed [OpenCode](https://github.com/opencode-ai/opencode) TUI in the Obsidian sidebar via a lightweight WebSocket bridge to WSL.
-
-## Demo
-
-![screenshot](docs/screenshot.png)
-
-## Features
-
-- **OpenCode TUI in Obsidian sidebar** — no separate terminal window needed
-- **Auto-start bridge** — bridge server starts when you open the sidebar, stops when Obsidian closes
-- **Full keyboard passthrough** — Ctrl+D, Ctrl+R, arrows, and all terminal shortcuts work (no Obsidian hotkey interception)
-- **Settings panel** — font size, reconnect delay, scrollback buffer, WSL distribution, and more
-- **Auto-reconnect** — seamlessly reconnects if the bridge is temporarily unavailable
-- **Health check** — auto-restarts the bridge if it crashes
-- **Theme-aware** — matches Obsidian's light/dark theme
+Embed [OpenCode](https://opencode.ai) web UI in the Obsidian sidebar via WSL.
 
 ## Architecture
 
 ```
 Obsidian (Windows)                    WSL (Linux)
 ┌─────────────────────┐              ┌──────────────────────┐
-│  xterm.js Terminal  │ ← WebSocket →│  Bridge Server       │
-│  + FitAddon         │  127.0.0.1   │  (node-pty + ws)     │
-│  + CanvasAddon      │              │  spawns opencode TUI │
+│  <iframe>           │ ← HTTP/SSE →│  opencode serve      │
+│  OpenCode Web UI    │  127.0.0.1  │  (REST API + Web UI) │
 └─────────────────────┘              └──────────────────────┘
 ```
 
 ## Requirements
 
 - **Windows 10/11** with [WSL2](https://learn.microsoft.com/en-us/windows/wsl/install) installed
-- **Node.js** installed inside WSL (for the bridge server)
-- **OpenCode CLI** installed inside WSL (`curl -fsSL https://get.opencode.com | bash`)
-- **Obsidian** v1.7.2+
+- **OpenCode CLI** installed inside WSL (`curl -fsSL https://opencode.ai/install.sh | bash`)
+- **Obsidian** v1.4.0+
 
 ## Installation
 
-### Via BRAT (recommended)
+### Via BRAT
 
-1. Install [BRAT](https://obsidian.md/plugins?id=obsidian42-brat) from Community plugins
-2. Run command `BRAT: Add a beta plugin for testing`
+1. Install [BRAT](https://obsidian.md/plugins?id=obsidian42-brat)
+2. Run `BRAT: Add a beta plugin for testing`
 3. Enter `https://github.com/emmet24/obsidian-opencode-wsl`
-4. Enable the plugin in Settings → Community plugins
 
 ### Manual
 
@@ -51,53 +34,34 @@ Obsidian (Windows)                    WSL (Linux)
 
 ## Usage
 
-1. Click the terminal icon in the left ribbon, or run `OpenCode: Toggle WSL Terminal` from the command palette
-2. The bridge server auto-starts inside WSL
-3. OpenCode TUI appears in the right sidebar
-4. Use OpenCode as you normally would in a terminal
+1. Click the terminal icon in the left ribbon, or run `Toggle OpenCode panel` from the command palette
+2. The OpenCode server starts automatically inside WSL
+3. The OpenCode web UI appears in the right sidebar
+4. Use OpenCode as you would in a browser
 
 ### Settings
 
 | Setting | Default | Description |
 |---------|---------|-------------|
-| Bridge port | 8765 | WebSocket port for the WSL bridge server |
-| Working directory (WSL path) | auto-detected | Default working directory inside WSL |
+| Server port | 14096 | Port for the OpenCode server |
 | WSL distribution | (default) | Leave empty to use the default WSL distro |
-| Terminal font size | 14 | Font size for the terminal |
-| Terminal font family | MesloLGS NF, JetBrains Mono, ... | Font family for the terminal |
-| Reconnect delay | 2000ms | Milliseconds to wait before reconnecting on disconnect |
-| Scrollback buffer | 10000 | Number of lines to keep in scrollback |
-| Node command | node | Node.js command used inside WSL |
+| OpenCode path (WSL) | opencode | Path to the opencode executable inside WSL |
+| Working directory (WSL path) | auto-detected | Default working directory inside WSL |
+| Server password | (empty) | OPENCODE_SERVER_PASSWORD for auth |
 
 ## Development
 
 ```bash
-# Clone the repo
 git clone https://github.com/emmet24/obsidian-opencode-wsl.git
 cd obsidian-opencode-wsl
-
-# Install dependencies
 npm install
-
-# Build the plugin (main.js + bridge.js)
 npm run build
-
-# Development mode (watch + rebuild)
-npm run dev
-```
-
-### Bridge server (standalone)
-
-The bridge server can also be run directly inside WSL for testing:
-
-```bash
-node bridge.js --port 8765 --dir /path/to/working/dir
 ```
 
 ## Related
 
-- [OpenCode](https://github.com/opencode-ai/opencode) — The AI-powered terminal
-- [obsidian-opencode](https://github.com/kriss-spy/obsidian-opencode) — Original Obsidian OpenCode plugin (Linux-only, different architecture)
+- [OpenCode](https://github.com/anomalyco/opencode) — The AI platform
+- [opencode-obsidian](https://github.com/mtymek/opencode-obsidian) — Similar plugin by mtymek
 
 ## License
 

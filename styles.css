@@ -1,187 +1,4 @@
-/*
-
- xterm.js: https://github.com/xtermjs/xterm.js
- Copyright (c) 2014 The xterm.js authors
- Copyright (c) 2012-2013, Christopher Jeffrey (MIT License)
- https://github.com/chjj/term.js
-
- Permission is hereby granted, free of charge, to any person obtaining a copy
- of this software and associated documentation files (the "Software"), to deal
- in the Software without restriction, including without limitation the rights
- to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- copies of the Software, and to permit persons to whom the Software is
- furnished to do so, subject to the following conditions:
-
- The above copyright notice and this permission notice shall be included in
- all copies or substantial portions of the Software.
-
- THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- THE SOFTWARE.
-
-*/
-
-/* ---- xterm.js core styles ---- */
-
-.xterm {
-	position: relative;
-	user-select: none;
-	-ms-user-select: none;
-	-webkit-user-select: none;
-}
-
-.xterm.focus,
-.xterm:focus {
-	outline: none;
-}
-
-.xterm .xterm-helpers {
-	position: absolute;
-	top: 0;
-	z-index: 5;
-}
-
-.xterm .xterm-helper-textarea {
-	padding: 0;
-	border: 0;
-	margin: 0;
-	position: absolute;
-	opacity: 0;
-	left: -9999em;
-	top: 0;
-	width: 0;
-	height: 0;
-	z-index: -5;
-	white-space: nowrap;
-	overflow: hidden;
-	resize: none;
-	caret-color: transparent;
-}
-
-.xterm .composition-view {
-	background: #000;
-	color: #fff;
-	display: none;
-	position: absolute;
-	white-space: nowrap;
-	z-index: 1;
-}
-
-.xterm .composition-view.active {
-	display: block;
-}
-
-.xterm .xterm-viewport {
-	background-color: #000;
-	overflow-y: scroll;
-	cursor: default;
-	position: absolute;
-	right: 0;
-	left: 0;
-	top: 0;
-	bottom: 0;
-}
-
-.xterm .xterm-screen {
-	position: relative;
-}
-
-.xterm .xterm-screen canvas {
-	position: absolute;
-	left: 0;
-	top: 0;
-}
-
-.xterm .xterm-scroll-area {
-	visibility: hidden;
-}
-
-.xterm-char-measure-element {
-	display: inline-block;
-	visibility: hidden;
-	position: absolute;
-	top: 0;
-	left: -9999em;
-	line-height: normal;
-}
-
-.xterm.enable-mouse-events {
-	cursor: default;
-}
-
-.xterm.xterm-cursor-pointer,
-.xterm .xterm-cursor-pointer {
-	cursor: pointer;
-}
-
-.xterm.column-select.focus {
-	cursor: crosshair;
-}
-
-.xterm .xterm-accessibility:not(.debug),
-.xterm .xterm-message {
-	position: absolute;
-	left: 0;
-	top: 0;
-	bottom: 0;
-	right: 0;
-	z-index: 10;
-	color: transparent;
-	pointer-events: none;
-}
-
-.xterm .xterm-accessibility-tree:not(.debug) *::selection {
-	color: transparent;
-}
-
-.xterm .xterm-accessibility-tree {
-	user-select: text;
-	white-space: pre;
-}
-
-.xterm .live-region {
-	position: absolute;
-	left: -9999px;
-	width: 1px;
-	height: 1px;
-	overflow: hidden;
-}
-
-.xterm .xterm-screen .xterm-dim {
-	opacity: 1;
-}
-
-
-
-.xterm-screen .xterm-decoration-container .xterm-decoration {
-	z-index: 6;
-	position: absolute;
-}
-
-.xterm-screen .xterm-decoration-container .xterm-decoration.xterm-decoration-top-layer {
-	z-index: 7;
-}
-
-.xterm-decoration-overview-ruler {
-	z-index: 8;
-	position: absolute;
-	top: 0;
-	right: 0;
-	pointer-events: none;
-}
-
-.xterm-decoration-top {
-	z-index: 2;
-	position: relative;
-}
-
-/* ---- Plugin-specific styles ---- */
-
-.opencode-wsl-view {
+.opencode-iframe-view {
 	height: 100%;
 	width: 100%;
 	overflow: hidden;
@@ -200,50 +17,33 @@
 	flex-direction: column;
 }
 
-.workspace-leaf-content[data-type="opencode-wsl-view"] .view-header {
-	display: none;
-}
-
-.opencode-wsl-terminal {
+.opencode-iframe {
 	flex: 1;
 	width: 100%;
 	height: 100%;
-	min-height: 0;
-	overflow: hidden;
-	position: relative;
-	padding: 0;
-	margin: 0;
+	border: none;
+	display: none;
 }
 
-.opencode-wsl-terminal .xterm {
+.opencode-iframe-status {
+	display: flex;
+	align-items: center;
+	justify-content: center;
 	height: 100%;
 	width: 100%;
-	padding: 0;
-	margin: 0;
-}
-
-.opencode-wsl-terminal .xterm .xterm-viewport {
-	overflow-y: auto;
-	overflow-x: hidden;
-	background-color: transparent;
-}
-
-.opencode-wsl-terminal .xterm .xterm-screen canvas {
-	display: block;
-}
-
-.mod-right-split .workspace-leaf-content[data-type="opencode-wsl-view"] {
-	width: 100%;
-}
-
-.mod-right-split .opencode-wsl-view {
-	width: 100%;
-}
-
-.opencode-wsl-slider-value {
-	margin-left: 8px;
-	min-width: 24px;
-	display: inline-block;
 	text-align: center;
-	font-variant-numeric: tabular-nums;
+	padding: 2em;
+	box-sizing: border-box;
+}
+
+.opencode-iframe-status-loading {
+	color: var(--text-muted);
+}
+
+.opencode-iframe-status-error {
+	color: var(--text-error);
+}
+
+.opencode-iframe-status-connected {
+	display: none;
 }

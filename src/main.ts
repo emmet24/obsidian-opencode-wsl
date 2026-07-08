@@ -6,69 +6,60 @@ import {
 	WorkspaceLeaf,
 	Notice,
 } from "obsidian";
-import { OpencodeWslSettings, DEFAULT_SETTINGS } from "./settings";
-import { OpencodeWslView, VIEW_TYPE_OPENCODE_WSL } from "./views/opencodeView";
-import { BridgeManager } from "./bridgeManager";
+import { OpencodeSettings, DEFAULT_SETTINGS } from "./settings";
+import { OpencodeView, VIEW_TYPE } from "./views/opencodeView";
+import { ServerManager } from "./serverManager";
 
-export default class OpencodeWslPlugin extends Plugin {
-	settings: OpencodeWslSettings;
-	bridgeManager: BridgeManager;
-
-	get bridgeScriptDir(): string {
-		const vaultPath = this.detectWslVaultPath();
-		if (!vaultPath) return "";
-		return `${vaultPath}/.obsidian/plugins/opencode-wsl`;
-	}
+export default class OpencodePlugin extends Plugin {
+	settings: OpencodeSettings;
+	serverManager: ServerManager;
 
 	async onload(): Promise<void> {
-		// Platform guard: WSL is Windows-only
-		if ((process.platform as string) !== "win32") {
+		if (process.platform !== "win32") {
 			new Notice("OpenCode WSL requires Windows + WSL");
 			return;
 		}
 
 		await this.loadSettings();
 
-		// Auto-detect vault WSL path for cwd
-		const wslPath = this.detectWslVaultPath();
-		if (wslPath && !this.settings.cwd) {
-			this.settings.cwd = wslPath;
-			await this.saveSettings();
-		}
-
-		this.bridgeManager = new BridgeManager(this);
+		this.serverManager = new ServerManager({
+			port: this.settings.port,
+			wslDistro: this.settings.wslDistro,
+			opencodePath: this.settings.opencodePath,
+			cwd: this.settings.cwd,
+			serverPassword: this.settings.serverPassword,
+		});
 
 		this.registerView(
-			VIEW_TYPE_OPENCODE_WSL,
-			(leaf: WorkspaceLeaf) => new OpencodeWslView(leaf, this)
+			VIEW_TYPE,
+			(leaf: WorkspaceLeaf) => new OpencodeView(leaf, this),
 		);
 
-		this.addRibbonIcon("terminal", "OpenCode WSL", () => {
+		this.addRibbonIcon("terminal", "OpenCode", () => {
 			void this.activateView();
 		});
 
 		this.addCommand({
-			id: "toggle-terminal",
-			name: "OpenCode: Toggle WSL Terminal",
+			id: "toggle-opencode",
+			name: "Toggle OpenCode panel",
 			callback: () => {
 				void this.activateView();
 			},
 		});
 
-		this.addSettingTab(new OpencodeWslSettingTab(this.app, this));
+		this.addSettingTab(new OpencodeSettingTab(this.app, this));
 	}
 
 	onunload(): void {
-		this.bridgeManager.destroy();
+		this.serverManager.destroy();
 		this.app.workspace
-			.getLeavesOfType(VIEW_TYPE_OPENCODE_WSL)
+			.getLeavesOfType(VIEW_TYPE)
 			.forEach((leaf) => leaf.detach());
 	}
 
 	async activateView(): Promise<void> {
 		const { workspace } = this.app;
-
-		const existing = workspace.getLeavesOfType(VIEW_TYPE_OPENCODE_WSL);
+		const existing = workspace.getLeavesOfType(VIEW_TYPE);
 		if (existing.length > 0) {
 			void workspace.revealLeaf(existing[0]);
 			return;
@@ -77,39 +68,23 @@ export default class OpencodeWslPlugin extends Plugin {
 		const leaf = workspace.getRightLeaf(false);
 		if (!leaf) return;
 
-		await leaf.setViewState({
-			type: VIEW_TYPE_OPENCODE_WSL,
-			active: true,
-		});
-
+		await leaf.setViewState({ type: VIEW_TYPE, active: true });
 		void workspace.revealLeaf(leaf);
 	}
 
 	async loadSettings(): Promise<void> {
-		const data = (await this.loadData()) as Partial<OpencodeWslSettings> | null;
-		const merged = Object.assign({}, DEFAULT_SETTINGS, data ?? {});
-		// Strip keys not in DEFAULT_SETTINGS (schema drift cleanup)
-		for (const key of Object.keys(merged)) {
-			if (!(key in DEFAULT_SETTINGS)) {
-				delete (merged as unknown as Record<string, unknown>)[key];
-			}
-		}
-		this.settings = merged;
+		const data = (await this.loadData()) as Partial<OpencodeSettings> | null;
+		this.settings = Object.assign({}, DEFAULT_SETTINGS, data ?? {});
 	}
 
 	async saveSettings(): Promise<void> {
-		try {
-			await this.saveData(this.settings);
-		} catch (err) {
-			console.error("[opencode-wsl] Failed to save settings:", err);
-			new Notice("OpenCode WSL: Failed to save settings");
-		}
+		await this.saveData(this.settings);
 	}
 
-private detectWslVaultPath(): string | null {
+	private detectWslVaultPath(): string | null {
 		try {
 			const adapter = this.app.vault.adapter as unknown as { getBasePath(): string };
-			const winPath: string = adapter.getBasePath();
+			const winPath = adapter.getBasePath();
 			const match = winPath.match(/^([A-Za-z]):(.*)$/);
 			if (!match) return null;
 			return `/mnt/${match[1].toLowerCase()}${match[2].replace(/\\/g, "/")}`;
@@ -119,16 +94,12 @@ private detectWslVaultPath(): string | null {
 	}
 }
 
-class OpencodeWslSettingTab extends PluginSettingTab {
-	plugin: OpencodeWslPlugin;
+class OpencodeSettingTab extends PluginSettingTab {
+	plugin: OpencodePlugin;
 
-	constructor(app: App, plugin: OpencodeWslPlugin) {
+	constructor(app: App, plugin: OpencodePlugin) {
 		super(app, plugin);
 		this.plugin = plugin;
-	}
-
-	formatScrollback(n: number): string {
-		return n >= 1000 ? `${(n / 1000).toFixed(0)}k` : String(n);
 	}
 
 	display(): void {
@@ -136,39 +107,24 @@ class OpencodeWslSettingTab extends PluginSettingTab {
 		containerEl.empty();
 
 		new Setting(containerEl)
-			.setName("Bridge port")
-			.setDesc("WebSocket port for the WSL bridge server")
+			.setName("Server port")
+			.setDesc("Port for the OpenCode server")
 			.addText((text) =>
 				text
-					.setPlaceholder("8765")
-					.setValue(String(this.plugin.settings.bridgePort))
+					.setPlaceholder("14096")
+					.setValue(String(this.plugin.settings.port))
 					.onChange(async (value) => {
 						const num = parseInt(value, 10);
 						if (!isNaN(num) && num > 0 && num < 65536) {
-							this.plugin.settings.bridgePort = num;
+							this.plugin.settings.port = num;
 							await this.plugin.saveSettings();
 						}
-					})
-			);
-
-		new Setting(containerEl)
-			.setName("Working directory (WSL path)")
-			.setDesc("Default working directory inside WSL")
-			.addText((text) =>
-				text
-					.setPlaceholder("/mnt/c/Users/.../my-vault")
-					.setValue(this.plugin.settings.cwd)
-					.onChange(async (value) => {
-						this.plugin.settings.cwd = value;
-						await this.plugin.saveSettings();
-					})
+					}),
 			);
 
 		new Setting(containerEl)
 			.setName("WSL distribution")
-			.setDesc(
-				"Leave empty to use the default WSL distribution"
-			)
+			.setDesc("Leave empty to use the default WSL distribution")
 			.addText((text) =>
 				text
 					.setPlaceholder("Ubuntu")
@@ -176,112 +132,77 @@ class OpencodeWslSettingTab extends PluginSettingTab {
 					.onChange(async (value) => {
 						this.plugin.settings.wslDistro = value;
 						await this.plugin.saveSettings();
-					})
+					}),
 			);
 
 		new Setting(containerEl)
-			.setName("Terminal font size")
-			.setDesc("Font size for the terminal (8–32)")
-			.addSlider((slider) => {
-				const valueLabel = createSpan({ text: String(this.plugin.settings.fontSize), cls: "opencode-wsl-slider-value" });
-				slider
-					.setLimits(8, 32, 1)
-					.setValue(this.plugin.settings.fontSize)
-					.onChange(async (value) => {
-						this.plugin.settings.fontSize = value;
-						valueLabel.textContent = String(value);
-						await this.plugin.saveSettings();
-					});
-				slider.sliderEl.parentElement?.appendChild(valueLabel);
-			});
-
-		new Setting(containerEl)
-			.setName("Terminal font family")
-			.setDesc("Font family for the terminal")
+			.setName("OpenCode path (WSL)")
+			.setDesc("Path to the opencode executable inside WSL")
 			.addText((text) =>
 				text
-					.setPlaceholder("monospace")
-					.setValue(this.plugin.settings.fontFamily)
+					.setPlaceholder("opencode")
+					.setValue(this.plugin.settings.opencodePath)
 					.onChange(async (value) => {
-						this.plugin.settings.fontFamily = value || "monospace";
+						this.plugin.settings.opencodePath = value || "opencode";
 						await this.plugin.saveSettings();
-					})
+					}),
 			);
 
 		new Setting(containerEl)
-			.setName("Reconnect delay")
-			.setDesc("Milliseconds to wait before reconnecting on disconnect")
-			.addSlider((slider) => {
-				const valueLabel = createSpan({ text: `${this.plugin.settings.reconnectDelay}ms`, cls: "opencode-wsl-slider-value" });
-				slider
-					.setLimits(500, 30000, 500)
-					.setValue(this.plugin.settings.reconnectDelay)
-					.onChange(async (value) => {
-						this.plugin.settings.reconnectDelay = value;
-						valueLabel.textContent = `${value}ms`;
-						await this.plugin.saveSettings();
-					});
-				slider.sliderEl.parentElement?.appendChild(valueLabel);
-			});
-
-		new Setting(containerEl)
-			.setName("Scrollback buffer")
-			.setDesc("Number of lines to keep in scrollback")
-			.addSlider((slider) => {
-				const valueLabel = createSpan({ text: this.formatScrollback(this.plugin.settings.scrollback), cls: "opencode-wsl-slider-value" });
-				slider
-					.setLimits(1000, 50000, 1000)
-					.setValue(this.plugin.settings.scrollback)
-					.onChange(async (value) => {
-						this.plugin.settings.scrollback = value;
-						valueLabel.textContent = this.formatScrollback(value);
-						await this.plugin.saveSettings();
-					});
-				slider.sliderEl.parentElement?.appendChild(valueLabel);
-			});
-
-		new Setting(containerEl).setName("Bridge server").setHeading();
-
-		new Setting(containerEl)
-			.setName("Node command")
-			.setDesc("Command used inside WSL to run Node.js (e.g. node, /usr/bin/node)")
+			.setName("Working directory (WSL path)")
+			.setDesc("Working directory inside WSL")
 			.addText((text) =>
 				text
-					.setPlaceholder("node")
-					.setValue(this.plugin.settings.nodeCommand)
+					.setPlaceholder("/mnt/c/Users/.../my-vault")
+					.setValue(this.plugin.settings.cwd)
 					.onChange(async (value) => {
-						this.plugin.settings.nodeCommand = value || "node";
+						this.plugin.settings.cwd = value;
 						await this.plugin.saveSettings();
-					})
+					}),
 			);
 
-		const status = this.plugin.bridgeManager?.running ? "running" : "stopped";
 		new Setting(containerEl)
-			.setName("Bridge status")
-			.setDesc(`Bridge server is currently ${status}`)
+			.setName("Server password")
+			.setDesc("OPENCODE_SERVER_PASSWORD (leave empty for no auth)")
+			.addText((text) =>
+				text
+					.setPlaceholder("optional")
+					.setValue(this.plugin.settings.serverPassword)
+					.onChange(async (value) => {
+						this.plugin.settings.serverPassword = value;
+						await this.plugin.saveSettings();
+					}),
+			);
+
+		containerEl.createEl("h2", { text: "Server" });
+
+		const status = this.plugin.serverManager?.running ? "running" : "stopped";
+		new Setting(containerEl)
+			.setName("Status")
+			.setDesc(`Server is ${status}`)
 			.addButton((btn) =>
 				btn
-					.setButtonText(this.plugin.bridgeManager?.running ? "Stop" : "Start")
+					.setButtonText(this.plugin.serverManager?.running ? "Stop" : "Start")
 					.setCta()
 					.onClick(async () => {
-						if (this.plugin.bridgeManager?.running) {
-							await this.plugin.bridgeManager.stop();
-							new Notice("Bridge stopped");
+						if (this.plugin.serverManager?.running) {
+							await this.plugin.serverManager.stop();
+							new Notice("Server stopped");
 						} else {
-							const ok = await this.plugin.bridgeManager.start();
-							new Notice(ok ? "Bridge started" : "Bridge failed to start");
+							const ok = await this.plugin.serverManager.start();
+							new Notice(ok ? "Server started" : "Server failed to start");
 						}
 						this.display();
-					})
+					}),
 			)
 			.addButton((btn) =>
 				btn
 					.setButtonText("Restart")
 					.onClick(async () => {
-						await this.plugin.bridgeManager.restart();
-						new Notice("Bridge restarted");
+						await this.plugin.serverManager.restart();
+						new Notice("Server restarted");
 						this.display();
-					})
+					}),
 			);
 	}
 }
