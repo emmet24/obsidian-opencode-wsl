@@ -182,16 +182,17 @@ class OpencodeSettingTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName("Server password")
-			.setDesc("OPENCODE_SERVER_PASSWORD (leave empty for no auth)")
-			.addText((text) =>
+			.setDesc("OPENCODE_SERVER_PASSWORD (stored in plain text, leave empty for no auth)")
+			.addText((text) => {
+				text.inputEl.type = "password";
 				text
 					.setPlaceholder("optional")
 					.setValue(this.plugin.settings.serverPassword)
 					.onChange(async (value) => {
 						this.plugin.settings.serverPassword = value;
 						await this.plugin.saveSettings();
-					}),
-			);
+					});
+			});
 
 		new Setting(containerEl).setName("Server").setHeading();
 
