@@ -14,7 +14,6 @@ export class ServerManager {
 	private child: ServerProcess | null = null;
 	private healthTimer: number | null = null;
 	private shuttingDown = false;
-	private static resolvedCommand: string | null = null;
 
 	constructor(
 		private settings: {
@@ -147,13 +146,8 @@ export class ServerManager {
 	}
 
 	private async resolveCommand(): Promise<string | null> {
-		if (ServerManager.resolvedCommand) return ServerManager.resolvedCommand;
-
 		const cmd = this.settings.opencodePath || "opencode";
-		if (cmd.includes("/")) {
-			ServerManager.resolvedCommand = cmd;
-			return cmd;
-		}
+		if (cmd.includes("/")) return cmd;
 
 		// Try resolving via bash (non-interactive, clean exit)
 		try {
@@ -161,10 +155,7 @@ export class ServerManager {
 				this.buildWslArgs(["bash", "-c", `command -v "${cmd}" 2>/dev/null || echo MISSING`]),
 			);
 			const resolved = result.trim().split("\n")[0];
-			if (resolved && resolved !== "MISSING") {
-				ServerManager.resolvedCommand = resolved;
-				return resolved;
-			}
+			if (resolved && resolved !== "MISSING") return resolved;
 		} catch {
 			// Fall through
 		}
@@ -181,13 +172,11 @@ export class ServerManager {
 		for (const c of candidates) {
 			try {
 				await this.execWslCapture(this.buildWslArgs(["test", "-x", c]));
-				ServerManager.resolvedCommand = c;
 				return c;
 			} catch {
 				// Try next
 			}
 		}
-		ServerManager.resolvedCommand = cmd;
 		return cmd;
 	}
 
@@ -302,8 +291,19 @@ export class ServerManager {
 		this.shuttingDown = true;
 		this.stopHealthCheck();
 		if (this.child) {
-			try { this.child.kill("SIGTERM"); } catch { /* ignore */ }
+			const proc = this.child;
 			this.child = null;
+			if (proc.pid) {
+				try {
+					spawn("taskkill", ["/F", "/T", "/PID", String(proc.pid)], {
+						windowsHide: true, stdio: "ignore",
+					});
+				} catch {
+					try { proc.kill("SIGTERM"); } catch { /* ignore */ }
+				}
+			} else {
+				try { proc.kill("SIGTERM"); } catch { /* ignore */ }
+			}
 		}
 	}
 }
