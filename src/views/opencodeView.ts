@@ -7,6 +7,7 @@ export class OpencodeView extends ItemView {
 	private plugin: OpencodePlugin;
 	private iframe: HTMLIFrameElement | null = null;
 	private statusEl: HTMLElement | null = null;
+	private statusText: HTMLElement | null = null;
 	private startBtn: HTMLElement | null = null;
 
 	constructor(leaf: WorkspaceLeaf, plugin: OpencodePlugin) {
@@ -31,18 +32,20 @@ export class OpencodeView extends ItemView {
 		container.empty();
 		container.addClass("opencode-iframe-view");
 
+		// Status wrapper: vertically centers status text + start button
 		const statusEl = container.createEl("div", {
 			cls: "opencode-iframe-status",
 		});
-		this.statusEl = statusEl;
-
-		const startBtn = container.createEl("button", {
+		const statusText = statusEl.createEl("div", { cls: "opencode-iframe-status-text" });
+		const startBtn = statusEl.createEl("button", {
 			cls: "opencode-iframe-start-btn",
 			text: "Start OpenCode",
 		});
 		startBtn.addEventListener("click", () => {
 			this.startServer();
 		});
+		this.statusEl = statusEl;
+		this.statusText = statusText;
 		this.startBtn = startBtn;
 
 		this.iframe = container.createEl("iframe", {
@@ -69,12 +72,19 @@ export class OpencodeView extends ItemView {
 	}
 
 	private async startServer(): Promise<void> {
+		console.log("[opencode-wsl] startServer called");
 		this.showStatus("Starting OpenCode server...", "loading");
-		const ok = await this.plugin.serverManager.start();
-		if (ok) {
-			this.loadIframe();
-		} else {
-			this.showStatus("Failed to start OpenCode server", "error");
+		try {
+			const ok = await this.plugin.serverManager.start();
+			console.log("[opencode-wsl] start() returned:", ok);
+			if (ok) {
+				this.loadIframe();
+			} else {
+				this.showStatus("Failed to start OpenCode server. Check console for details.", "error");
+			}
+		} catch (err) {
+			console.error("[opencode-wsl] startServer error:", err);
+			this.showStatus("Error: " + String(err), "error");
 		}
 	}
 
@@ -86,12 +96,11 @@ export class OpencodeView extends ItemView {
 	}
 
 	private showStatus(message: string, type: "loading" | "error" | "connected" | "stopped"): void {
-		if (!this.statusEl || !this.iframe || !this.startBtn) return;
-		this.statusEl.setText(message);
+		if (!this.statusText || !this.iframe || !this.startBtn || !this.statusEl) return;
+		this.statusText.setText(message);
 		this.statusEl.className = `opencode-iframe-status opencode-iframe-status-${type}`;
 		if (type === "connected") {
 			this.statusEl.style.display = "none";
-			this.startBtn.style.display = "none";
 			this.iframe.style.display = "flex";
 		} else if (type === "stopped") {
 			this.statusEl.style.display = "flex";
