@@ -218,7 +218,7 @@ export class ServerManager {
 		}
 	}
 
-	private async execWslCapture(args: string[]): Promise<string> {
+	private async execWslCapture(args: string[], timeoutMs = 10000): Promise<string> {
 		return new Promise((resolve, reject) => {
 			const proc = spawn("wsl.exe", args, {
 				windowsHide: true,
@@ -226,13 +226,21 @@ export class ServerManager {
 			});
 			let output = "";
 			let error = "";
+			const timer = setTimeout(() => {
+				proc.kill();
+				reject(new Error(`Timed out after ${timeoutMs}ms`));
+			}, timeoutMs);
 			proc.stdout?.on("data", (d: Buffer) => { output += d.toString(); });
 			proc.stderr?.on("data", (d: Buffer) => { error += d.toString(); });
 			proc.on("exit", (code) => {
+				clearTimeout(timer);
 				if (code === 0) resolve(output);
 				else reject(new Error(error || `Exit code ${code}`));
 			});
-			proc.on("error", reject);
+			proc.on("error", (err) => {
+				clearTimeout(timer);
+				reject(err);
+			});
 		});
 	}
 
